@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <iostream>
+#include <string>
 #include <mutex>
 #include <mosquitto.h>
+#include <nlohmann/json.hpp>
 
 char *sub_topic   = "topic0";
 char *pub_topic   = "topic0";
-char *message = "message";
 volatile bool disconnected = false;
 std::mutex mtx;
 
@@ -39,7 +41,7 @@ void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_messag
     if(message->payloadlen){
         printf("%s ", message->topic);
         fwrite(message->payload, 1, message->payloadlen, stdout);
-        printf("%lf", *((double *)message->payload));
+        std::cout << "\nparsed json:" << nlohmann::json::parse((char*)message->payload) << std::endl;
         printf("\n");
     }else{
         printf("%s (null)\n", message->topic);
@@ -76,6 +78,10 @@ int main(int argc, char *argv[])
 
     mosquitto_loop_start(mosq);
 
+    nlohmann::json j;
+    j["pi"] = M_PI;
+    std::cout << j.dump() << std::endl;
+
     while(1){
         mtx.lock();
         if(disconnected){
@@ -83,9 +89,9 @@ int main(int argc, char *argv[])
         }
         mtx.unlock();
         printf("loop\n");
-        double data = 3.141592;
-        // mosquitto_publish(mosq, NULL, pub_topic, strlen(message), message, 0, 0);
-        mosquitto_publish(mosq, NULL, pub_topic, sizeof(data), &data, 0, 0);
+        std::string s = j.dump();
+        const char* message = s.c_str();
+        mosquitto_publish(mosq, NULL, pub_topic, strlen(message), message, 0, 0);
         sleep(1);
     }
 
