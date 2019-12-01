@@ -2,11 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <mutex>
 #include <mosquitto.h>
 
 char *sub_topic   = "topic0";
 char *pub_topic   = "topic0";
 char *message = "message";
+volatile bool disconnected = false;
+std::mutex mtx;
 
 void on_connect(struct mosquitto *mosq, void *obj, int result)
 {
@@ -17,6 +20,10 @@ void on_connect(struct mosquitto *mosq, void *obj, int result)
 void on_disconnect(struct mosquitto *mosq, void *obj, int rc)
 {
     printf("%s(%d)\n", __FUNCTION__, __LINE__);
+    mtx.lock();
+    disconnected = true;
+    mtx.unlock();
+    printf("\033[31mdisconnected from broker!!!\n\033[0m");
     mosquitto_loop_stop(mosq, true);
 }
 
@@ -70,6 +77,11 @@ int main(int argc, char *argv[])
     mosquitto_loop_start(mosq);
 
     while(1){
+        mtx.lock();
+        if(disconnected){
+            break;
+        }
+        mtx.unlock();
         printf("loop\n");
         double data = 3.141592;
         // mosquitto_publish(mosq, NULL, pub_topic, strlen(message), message, 0, 0);
