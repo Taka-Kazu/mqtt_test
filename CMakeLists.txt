@@ -19,5 +19,5 @@ INSTALL(
 INSTALL(
     EXPORT ${PROJECT_NAME}-export
     FILE ${PROJECT_NAME}-config.cmake
-    DESTINATION share/cmake/${PROJECT_NAME}/
+    DESTINATION share/cmake/${PROJECT_NAME}
 )
